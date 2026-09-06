@@ -15,6 +15,11 @@ class Settings(BaseSettings):
 
     embedding_model: str
 
+    llm_base_model: str
+    llm_adapter_path: str
+    llm_max_new_tokens: int
+    llm_temperature: float
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
