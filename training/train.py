@@ -323,8 +323,8 @@ def main() -> None:
             ]
         ),
 
-        warmup_ratio=training_config[
-            "warmup_ratio"
+        warmup_steps=training_config[
+            "warmup_steps"
         ],
 
         weight_decay=training_config[

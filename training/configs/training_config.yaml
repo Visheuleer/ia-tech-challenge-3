@@ -21,7 +21,7 @@ training:
 
   gradient_accumulation_steps: 8
 
-  warmup_ratio: 0.1
+  warmup_steps: 0.1
   weight_decay: 0.01
 
   logging_steps: 5
