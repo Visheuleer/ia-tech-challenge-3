@@ -13,7 +13,7 @@ lora:
   dropout: 0.05
 
 training:
-  epochs: 1
+  epochs: 3
   learning_rate: 0.0002
 
   per_device_train_batch_size: 1
@@ -21,7 +21,7 @@ training:
 
   gradient_accumulation_steps: 8
 
-  warmup_steps: 0.1
+  warmup_steps: 5
   weight_decay: 0.01
 
   logging_steps: 5
