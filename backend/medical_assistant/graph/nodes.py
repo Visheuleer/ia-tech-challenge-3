@@ -201,77 +201,153 @@ def build_clinical_context(
 ) -> ClinicalAssistantState:
     patient = state["patient"]
 
-    history = "\n".join(
-        f"- {item['condition']}: {item['notes'] or 'Sem observações'}"
-        for item in patient["medical_history"]
+    history = patient.get(
+        "medical_history",
+        []
     )
 
-    measurements = "\n".join(
+    measurements = patient.get(
+        "blood_pressure_measurements",
+        []
+    )
+
+    medications = patient.get(
+        "medications",
+        []
+    )
+
+    pending_exams = state.get(
+        "pending_exams",
+        []
+    )
+
+    protocol_results = state.get(
+        "protocol_results",
+        []
+    )
+
+    lines = [
+        "## PERGUNTA DO PROFISSIONAL",
+        state["question"],
+        "",
+        "## DADOS DO PACIENTE",
+        f"ID: {patient['id']}",
+        f"Nome: {patient['name']}",
+        "",
+        "## HISTÓRICO CLÍNICO REGISTRADO",
+    ]
+
+    if history:
+        for item in history:
+            lines.append(
+                f"- {item['condition']}"
+                + (
+                    f": {item['notes']}"
+                    if item.get("notes")
+                    else ""
+                )
+            )
+    else:
+        lines.append(
+            "- Nenhuma condição registrada."
+        )
+
+    lines.extend([
+        "",
+        "## MEDIÇÕES DE PRESSÃO ARTERIAL",
+    ])
+
+    if measurements:
+        for item in measurements:
+            lines.append(
+                f"- {item['measured_at']}: "
+                f"{item['systolic']}/"
+                f"{item['diastolic']} mmHg"
+            )
+    else:
+        lines.append(
+            "- Nenhuma medição disponível."
+        )
+
+    lines.extend([
+        "",
+        "## FATOS CALCULADOS PELO SISTEMA",
         (
-            f"- {item['measured_at']}: "
-            f"{item['systolic']}/{item['diastolic']} mmHg"
-        )
-        for item in patient["blood_pressure_measurements"]
+            "- Status das medições de pressão: "
+            f"{state['blood_pressure_status']}"
+        ),
+    ])
+
+    summary = state.get(
+        "blood_pressure_summary",
+        {}
     )
 
-    medications = "\n".join(
-        (
-            f"- {item['name']} {item['dosage']} "
-            f"({item['frequency']})"
+    if summary:
+        lines.append(
+            "- Média sistólica calculada: "
+            f"{summary.get('average_systolic')}"
         )
-        for item in patient["medications"]
-        if item["active"]
-    )
 
-    pending_exams = (
-        "\n".join(
-            f"- {exam['exam_type']}"
-            for exam in state["pending_exams"]
+        lines.append(
+            "- Média diastólica calculada: "
+            f"{summary.get('average_diastolic')}"
         )
-        or "- Nenhum exame pendente"
-    )
 
-    protocols = "\n\n".join(
-        (
-            f"Fonte: {item['source']}\n"
-            f"{item['content']}"
+    lines.extend([
+        "",
+        "## MEDICAMENTOS ATIVOS REGISTRADOS",
+    ])
+
+    active_medications = [
+        medication
+        for medication in medications
+        if medication.get("active")
+    ]
+
+    if active_medications:
+        for medication in active_medications:
+            lines.append(
+                f"- {medication['name']} "
+                f"{medication['dosage']} "
+                f"({medication['frequency']})"
+            )
+    else:
+        lines.append(
+            "- Nenhum medicamento ativo "
+            "registrado."
         )
-        for item in state["protocol_results"]
-    )
 
-    context = f"""
-        PERGUNTA DO MÉDICO
-        {state["question"]}
-        
-        PACIENTE
-        ID: {patient["id"]}
-        Nome: {patient["name"]}
-        Sexo: {patient["sex"]}
-        Data de nascimento: {patient["birth_date"]}
-        
-        HISTÓRICO CLÍNICO
-        {history}
-        
-        MEDIÇÕES DE PRESSÃO ARTERIAL
-        {measurements}
-        
-        RESUMO DA PRESSÃO
-        Status: {state["blood_pressure_status"]}
-        Média sistólica: {state["blood_pressure_summary"]["average_systolic"]}
-        Média diastólica: {state["blood_pressure_summary"]["average_diastolic"]}
-        
-        MEDICAMENTOS ATIVOS
-        {medications}
-        
-        EXAMES PENDENTES
-        {pending_exams}
-        
-        PROTOCOLOS RECUPERADOS
-        {protocols}
-        """.strip()
+    lines.extend([
+        "",
+        "## EXAMES PENDENTES",
+    ])
+
+    if pending_exams:
+        for exam in pending_exams:
+            lines.append(
+                f"- {exam['exam_type']}"
+            )
+    else:
+        lines.append(
+            "- Nenhum exame pendente."
+        )
+
+    lines.extend([
+        "",
+        "## PROTOCOLOS RECUPERADOS",
+    ])
+
+    for result in protocol_results:
+        lines.append(
+            f"\nFonte: {result['source']}\n"
+            f"{result['content']}"
+        )
 
     return {
-        "clinical_context": context,
+        "clinical_context": "\n".join(
+            lines
+        )
     }
 
 
@@ -284,11 +360,19 @@ def generate_response(
         "system/medical_assistant.md"
     )
 
+    generation_prompt = load_prompt(
+        "generation/clinical_response.md"
+    )
+
+    user_prompt = (
+        f"{generation_prompt}\n\n"
+        "## CONTEXTO CLÍNICO FORNECIDO PELO SISTEMA\n\n"
+        f"{state['clinical_context']}"
+    )
+
     response = llm.generate(
         system_prompt=system_prompt,
-        user_prompt=state[
-            "clinical_context"
-        ],
+        user_prompt=user_prompt,
     )
 
     return {
