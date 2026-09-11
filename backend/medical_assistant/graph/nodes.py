@@ -8,7 +8,11 @@ from medical_assistant.services.patient_service import (
     PatientService,
 )
 from medical_assistant.services.protocol_service import ProtocolService
-
+from medical_assistant.llm.model import get_medical_llm
+from medical_assistant.llm.prompt_loader import load_prompt
+from medical_assistant.llm.guardrails import (
+    validate_response,
+)
 
 def serialize_patient(patient: Any) -> dict[str, Any]:
     return {
@@ -268,4 +272,105 @@ def build_clinical_context(
 
     return {
         "clinical_context": context,
+    }
+
+
+def generate_response(
+    state: ClinicalAssistantState,
+) -> ClinicalAssistantState:
+    llm = get_medical_llm()
+
+    system_prompt = load_prompt(
+        "system/medical_assistant.md"
+    )
+
+    response = llm.generate(
+        system_prompt=system_prompt,
+        user_prompt=state[
+            "clinical_context"
+        ],
+    )
+
+    return {
+        "generated_response": response,
+    }
+
+
+def safety_validation(
+    state: ClinicalAssistantState,
+) -> ClinicalAssistantState:
+    result = validate_response(
+        state["generated_response"]
+    )
+
+    return {
+        "safety_status": result.status,
+        "safety_violations": (
+            result.violations
+        ),
+    }
+
+
+def build_safe_response(
+    state: ClinicalAssistantState,
+) -> ClinicalAssistantState:
+    return {
+        "final_response": (
+            "A resposta gerada foi bloqueada "
+            "pelos mecanismos de segurança. "
+            "Os dados disponíveis devem ser "
+            "avaliados diretamente pelo "
+            "profissional responsável."
+        )
+    }
+
+
+def add_review_warning(
+    state: ClinicalAssistantState,
+) -> ClinicalAssistantState:
+    response = state[
+        "generated_response"
+    ]
+
+    final_response = (
+        f"{response}\n\n"
+        "⚠️ Esta resposta contém elementos "
+        "que requerem revisão clínica antes "
+        "de qualquer decisão."
+    )
+
+    return {
+        "final_response": final_response,
+    }
+
+
+def add_sources(
+    state: ClinicalAssistantState,
+) -> ClinicalAssistantState:
+    sources = sorted(
+        {
+            item["source"]
+            for item in state[
+                "protocol_results"
+            ]
+        }
+    )
+
+    source_text = "\n".join(
+        f"- {source}"
+        for source in sources
+    )
+
+    final_response = (
+        f"{state['generated_response']}\n\n"
+        "Fontes utilizadas:\n"
+        f"{source_text}\n\n"
+        "Esta resposta é um suporte à decisão "
+        "clínica e requer validação do "
+        "profissional responsável."
+    )
+
+    return {
+        "final_response": final_response,
+        "sources": sources,
     }

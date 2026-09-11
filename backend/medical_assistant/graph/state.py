@@ -15,3 +15,12 @@ class ClinicalAssistantState(TypedDict, total=False):
     protocol_results: list[dict[str, str]]
 
     clinical_context: str
+
+    generated_response: str
+
+    safety_status: str
+    safety_violations: list[str]
+
+    final_response: str
+
+    sources: list[str]

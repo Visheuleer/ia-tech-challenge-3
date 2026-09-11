@@ -4,36 +4,44 @@ from medical_assistant.graph.workflow import (
 
 
 def main() -> None:
-    workflow = create_clinical_workflow()
+    workflow = (
+        create_clinical_workflow()
+    )
 
     result = workflow.invoke(
         {
             "patient_id": 2,
             "question": (
-                "Analise a situação atual deste paciente "
-                "e destaque pontos de atenção."
+                "Analise a situação atual "
+                "deste paciente e destaque "
+                "os principais pontos de atenção."
             ),
         }
     )
 
+    print()
     print("=" * 80)
-    print("BLOOD PRESSURE STATUS")
+    print("SAFETY STATUS")
     print("=" * 80)
-    print(result["blood_pressure_status"])
+    print(
+        result["safety_status"]
+    )
 
     print()
-
     print("=" * 80)
-    print("PENDING EXAMS")
+    print("SAFETY VIOLATIONS")
     print("=" * 80)
-    print(result["pending_exams"])
+    print(
+        result["safety_violations"]
+    )
 
     print()
-
     print("=" * 80)
-    print("CLINICAL CONTEXT")
+    print("FINAL RESPONSE")
     print("=" * 80)
-    print(result["clinical_context"])
+    print(
+        result["final_response"]
+    )
 
 
 if __name__ == "__main__":
