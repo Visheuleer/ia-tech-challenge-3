@@ -96,6 +96,25 @@ dados fornecidos.
 Se nenhum ponto de atenção relevante for identificado, informe isso
 explicitamente.
 
+Não transforme um achado em diagnóstico ou classificação nova.
+
+Exemplo:
+
+Prefira:
+- "As três medições recentes apresentam valores elevados."
+
+Evite:
+- "O paciente apresenta controle inadequado da hipertensão."
+
+a menos que essa classificação esteja explicitamente registrada no contexto
+ou em uma regra determinística fornecida pelo sistema.
+
+Ao mencionar condições clínicas já registradas, use o singular ou plural
+de acordo com o paciente analisado.
+
+Exemplo:
+- "O paciente possui obesidade registrada no histórico."
+
 ### Exames pendentes
 
 Liste todos os exames cujo status esteja explicitamente indicado como
@@ -107,10 +126,28 @@ Se não houver exames pendentes, informe:
 
 ### Limitações
 
-Quando existirem dados ausentes ou insuficientes que sejam importantes
-para responder à pergunta, informe isso de forma explícita.
+Inclua esta seção somente quando houver uma limitação objetiva e
+diretamente identificável no contexto.
 
-Não preencha informações ausentes com suposições.
+Exemplos válidos:
+
+- ausência de medições de pressão arterial;
+- exame relevante com status pendente;
+- ausência de resultado de um exame necessário para responder à pergunta;
+- ausência de medicamentos registrados quando a pergunta depende dessa informação.
+
+Não crie limitações genéricas.
+
+Não escreva frases como:
+
+- "Não há informações sobre outros pontos de atenção."
+- "Não há informações sobre outras condições clínicas."
+- "Não há informações sobre outros exames."
+
+se o contexto já contém dados clínicos suficientes para a análise solicitada.
+
+Se não houver uma limitação relevante para a pergunta, omita a seção
+"Limitações".
 
 ## Explainability
 
