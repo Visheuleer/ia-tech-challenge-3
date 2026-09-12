@@ -414,35 +414,6 @@ def build_attention_points(
     }
 
 
-def generate_response(
-    state: ClinicalAssistantState,
-) -> ClinicalAssistantState:
-    llm = get_medical_llm()
-
-    system_prompt = load_prompt(
-        "system/medical_assistant.md"
-    )
-
-    generation_prompt = load_prompt(
-        "generation/clinical_response.md"
-    )
-
-    user_prompt = (
-        f"{generation_prompt}\n\n"
-        "## CONTEXTO CLÍNICO FORNECIDO PELO SISTEMA\n\n"
-        f"{state['clinical_context']}"
-    )
-
-    response = llm.generate(
-        system_prompt=system_prompt,
-        user_prompt=user_prompt,
-    )
-
-    return {
-        "generated_response": response,
-    }
-
-
 def generate_summary(
     state: ClinicalAssistantState,
 ) -> ClinicalAssistantState:
@@ -476,14 +447,12 @@ def safety_validation(
     state: ClinicalAssistantState,
 ) -> ClinicalAssistantState:
     result = validate_response(
-        state["generated_response"]
+        state["clinical_summary"]
     )
 
     return {
         "safety_status": result.status,
-        "safety_violations": (
-            result.violations
-        ),
+        "safety_violations": result.violations,
     }
 
 
@@ -498,25 +467,6 @@ def build_safe_response(
             "avaliados diretamente pelo "
             "profissional responsável."
         )
-    }
-
-
-def add_review_warning(
-    state: ClinicalAssistantState,
-) -> ClinicalAssistantState:
-    response = state[
-        "generated_response"
-    ]
-
-    final_response = (
-        f"{response}\n\n"
-        "⚠️ Esta resposta contém elementos "
-        "que requerem revisão clínica antes "
-        "de qualquer decisão."
-    )
-
-    return {
-        "final_response": final_response,
     }
 
 

@@ -19,8 +19,6 @@ class ClinicalAssistantState(TypedDict, total=False):
 
     attention_points: list[str]
 
-    generated_response: str
-
     safety_status: str
     safety_violations: list[str]
 

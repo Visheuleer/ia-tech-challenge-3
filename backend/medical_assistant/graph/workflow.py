@@ -1,18 +1,24 @@
 from langgraph.graph import END, START, StateGraph
 
 from medical_assistant.graph.nodes import (
-    add_review_warning,
-    build_final_response,
+    build_attention_points,
     build_clinical_context,
+    build_final_response,
     build_safe_response,
     check_blood_pressure,
     check_pending_exams,
-    generate_response,
+    generate_summary,
     load_patient,
     retrieve_protocols,
     safety_validation,
 )
 from medical_assistant.graph.state import ClinicalAssistantState
+
+
+def route_after_validation(
+    state: ClinicalAssistantState,
+) -> str:
+    return state["safety_status"]
 
 
 def create_clinical_workflow():
@@ -46,8 +52,13 @@ def create_clinical_workflow():
     )
 
     graph.add_node(
-        "generate_response",
-        generate_response,
+        "build_attention_points",
+        build_attention_points,
+    )
+
+    graph.add_node(
+        "generate_summary",
+        generate_summary,
     )
 
     graph.add_node(
@@ -61,15 +72,11 @@ def create_clinical_workflow():
     )
 
     graph.add_node(
-        "add_review_warning",
-        add_review_warning,
-    )
-
-    graph.add_node(
         "build_safe_response",
         build_safe_response,
     )
 
+    # Fluxo principal
     graph.add_edge(
         START,
         "load_patient",
@@ -97,11 +104,16 @@ def create_clinical_workflow():
 
     graph.add_edge(
         "build_clinical_context",
-        "generate_response",
+        "build_attention_points",
     )
 
     graph.add_edge(
-        "generate_response",
+        "build_attention_points",
+        "generate_summary",
+    )
+
+    graph.add_edge(
+        "generate_summary",
         "safety_validation",
     )
 
@@ -110,12 +122,8 @@ def create_clinical_workflow():
         route_after_validation,
         {
             "safe": "build_final_response",
-            "needs_review": (
-                "add_review_warning"
-            ),
-            "blocked": (
-                "build_safe_response"
-            ),
+            "needs_review": "build_final_response",
+            "blocked": "build_safe_response",
         },
     )
 
@@ -125,19 +133,8 @@ def create_clinical_workflow():
     )
 
     graph.add_edge(
-        "add_review_warning",
-        END,
-    )
-
-    graph.add_edge(
         "build_safe_response",
         END,
     )
 
     return graph.compile()
-
-
-def route_after_validation(
-    state: ClinicalAssistantState,
-) -> str:
-    return state["safety_status"]
