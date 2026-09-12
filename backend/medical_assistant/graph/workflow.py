@@ -2,7 +2,7 @@ from langgraph.graph import END, START, StateGraph
 
 from medical_assistant.graph.nodes import (
     add_review_warning,
-    add_sources,
+    build_final_response,
     build_clinical_context,
     build_safe_response,
     check_blood_pressure,
@@ -56,8 +56,8 @@ def create_clinical_workflow():
     )
 
     graph.add_node(
-        "add_sources",
-        add_sources,
+        "build_final_response",
+        build_final_response,
     )
 
     graph.add_node(

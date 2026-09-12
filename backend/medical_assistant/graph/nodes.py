@@ -351,6 +351,69 @@ def build_clinical_context(
     }
 
 
+def build_attention_points(
+    state: ClinicalAssistantState,
+) -> ClinicalAssistantState:
+    patient = state["patient"]
+
+    points: list[str] = []
+
+    bp_status = state.get(
+        "blood_pressure_status"
+    )
+
+    measurements = patient.get(
+        "blood_pressure_measurements",
+        []
+    )
+
+    if bp_status == "elevated":
+        points.append(
+            "As medições recentes de pressão arterial "
+            "apresentam valores elevados segundo a regra "
+            "de classificação utilizada pelo sistema."
+        )
+
+    elif bp_status == "critical_attention":
+        points.append(
+            "As medições recentes de pressão arterial "
+            "atingiram o nível de atenção crítica definido "
+            "pelas regras internas do sistema."
+        )
+
+    history = patient.get(
+        "medical_history",
+        []
+    )
+
+    for item in history:
+        condition = item.get("condition")
+
+        if condition:
+            points.append(
+                f"Condição registrada no histórico: "
+                f"{condition}."
+            )
+
+    medications = patient.get(
+        "medications",
+        []
+    )
+
+    for medication in medications:
+        if medication.get("active"):
+            points.append(
+                "Medicação registrada como ativa: "
+                f"{medication['name']} "
+                f"{medication['dosage']} "
+                f"({medication['frequency']})."
+            )
+
+    return {
+        "attention_points": points,
+    }
+
+
 def generate_response(
     state: ClinicalAssistantState,
 ) -> ClinicalAssistantState:
@@ -377,6 +440,35 @@ def generate_response(
 
     return {
         "generated_response": response,
+    }
+
+
+def generate_summary(
+    state: ClinicalAssistantState,
+) -> ClinicalAssistantState:
+    llm = get_medical_llm()
+
+    system_prompt = load_prompt(
+        "system/medical_assistant.md"
+    )
+
+    generation_prompt = load_prompt(
+        "generation/clinical_summary.md"
+    )
+
+    user_prompt = (
+        f"{generation_prompt}\n\n"
+        "## FATOS DISPONÍVEIS\n\n"
+        f"{state['clinical_context']}"
+    )
+
+    response = llm.generate(
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+    )
+
+    return {
+        "clinical_summary": response.strip(),
     }
 
 
@@ -428,7 +520,7 @@ def add_review_warning(
     }
 
 
-def add_sources(
+def build_final_response(
     state: ClinicalAssistantState,
 ) -> ClinicalAssistantState:
     sources = sorted(
@@ -440,21 +532,72 @@ def add_sources(
         }
     )
 
-    source_text = "\n".join(
+    parts = [
+        "### Resumo clínico",
+        "",
+        state["clinical_summary"],
+        "",
+        "### Pontos de atenção",
+        "",
+    ]
+
+    attention_points = state.get(
+        "attention_points",
+        []
+    )
+
+    if attention_points:
+        parts.extend(
+            f"- {point}"
+            for point in attention_points
+        )
+    else:
+        parts.append(
+            "- Nenhum ponto de atenção "
+            "identificado pelas regras do sistema."
+        )
+
+    parts.extend([
+        "",
+        "### Exames pendentes",
+        "",
+    ])
+
+    pending_exams = state.get(
+        "pending_exams",
+        []
+    )
+
+    if pending_exams:
+        parts.extend(
+            f"- {exam['exam_type']}"
+            for exam in pending_exams
+        )
+    else:
+        parts.append(
+            "- Nenhum exame pendente "
+            "identificado."
+        )
+
+    parts.extend([
+        "",
+        "### Fontes utilizadas",
+        "",
+    ])
+
+    parts.extend(
         f"- {source}"
         for source in sources
     )
 
-    final_response = (
-        f"{state['generated_response']}\n\n"
-        "Fontes utilizadas:\n"
-        f"{source_text}\n\n"
+    parts.extend([
+        "",
         "Esta resposta é um suporte à decisão "
         "clínica e requer validação do "
-        "profissional responsável."
-    )
+        "profissional responsável.",
+    ])
 
     return {
-        "final_response": final_response,
+        "final_response": "\n".join(parts),
         "sources": sources,
     }

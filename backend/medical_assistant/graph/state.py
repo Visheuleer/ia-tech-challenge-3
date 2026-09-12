@@ -15,6 +15,9 @@ class ClinicalAssistantState(TypedDict, total=False):
     protocol_results: list[dict[str, str]]
 
     clinical_context: str
+    clinical_summary: str
+
+    attention_points: list[str]
 
     generated_response: str
 
