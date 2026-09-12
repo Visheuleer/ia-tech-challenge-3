@@ -498,6 +498,60 @@ def generate_summary(
     }
 
 
+def build_summary_facts(
+    state: ClinicalAssistantState,
+) -> str:
+    summary = state.get(
+        "blood_pressure_summary",
+        {}
+    )
+
+    bp_status = state.get(
+        "blood_pressure_status"
+    )
+
+    avg_systolic = summary.get(
+        "average_systolic"
+    )
+
+    avg_diastolic = summary.get(
+        "average_diastolic"
+    )
+
+    if bp_status == "elevated":
+        return (
+            "As medições recentes de pressão arterial "
+            "apresentam valores elevados segundo a regra "
+            "utilizada pelo sistema"
+            + (
+                f", com média sistólica de {avg_systolic:.0f} mmHg "
+                f"e média diastólica de {avg_diastolic:.0f} mmHg."
+                if avg_systolic is not None
+                and avg_diastolic is not None
+                else "."
+            )
+        )
+
+    if bp_status == "critical_attention":
+        return (
+            "As medições recentes de pressão arterial "
+            "atingiram o nível de atenção crítica definido "
+            "pelas regras internas do sistema."
+        )
+
+    if bp_status == "stable":
+        return (
+            "As medições recentes de pressão arterial "
+            "encontram-se dentro da faixa considerada estável "
+            "pelas regras internas do sistema."
+        )
+
+    return (
+        "Não há dados suficientes de pressão arterial "
+        "para produzir um resumo objetivo."
+    )
+
+
 def clean_summary(text: str) -> str:
     summary = text.strip()
 
@@ -586,7 +640,7 @@ def build_final_response(
     parts = [
         "### Resumo clínico",
         "",
-        state["clinical_summary"],
+        build_summary_facts(state),
         "",
         "### Pontos de atenção",
         "",
