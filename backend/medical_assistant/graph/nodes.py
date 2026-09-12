@@ -1,5 +1,6 @@
 from statistics import mean
 from typing import Any
+import re
 
 from medical_assistant.database.models.audit_log import AuditLog
 from medical_assistant.database.session import SessionLocal
@@ -497,26 +498,49 @@ def generate_summary(
     }
 
 
-def clean_summary(
-    text: str,
-) -> str:
+def clean_summary(text: str) -> str:
     summary = text.strip()
 
-    prefixes = [
-        "### Resumo clínico",
-        "## Resumo clínico",
-        "# Resumo clínico",
-        "Resumo clínico:",
-        "Resumo clínico",
+    # Remove um eventual título inicial gerado pela LLM.
+    summary = re.sub(
+        r"^\s*#{1,6}\s*Resumo\s+cl[ií]nico\s*:?\s*",
+        "",
+        summary,
+        flags=re.IGNORECASE,
+    )
+
+    summary = re.sub(
+        r"^\s*Resumo\s+cl[ií]nico\s*:?\s*",
+        "",
+        summary,
+        flags=re.IGNORECASE,
+    )
+
+    section_patterns = [
+        r"^\s*#{1,6}\s*Pontos?\s+de\s+aten[cç][aã]o",
+        r"^\s*#{1,6}\s*Exames?\s+pendentes?",
+        r"^\s*#{1,6}\s*Limita[cç][oõ]es",
+        r"^\s*#{1,6}\s*Fontes?",
+        r"^\s*Pontos?\s+de\s+aten[cç][aã]o\s*:",
+        r"^\s*Exames?\s+pendentes?\s*:",
+        r"^\s*Limita[cç][oõ]es\s*:",
+        r"^\s*Fontes?\s*:",
     ]
 
-    for prefix in prefixes:
-        if summary.lower().startswith(
-            prefix.lower()
-        ):
+    for pattern in section_patterns:
+        match = re.search(
+            pattern,
+            summary,
+            flags=(
+                re.IGNORECASE
+                | re.MULTILINE
+            ),
+        )
+
+        if match:
             summary = summary[
-                len(prefix):
-            ].lstrip(":\n ")
+                :match.start()
+            ]
 
     return summary.strip()
 
