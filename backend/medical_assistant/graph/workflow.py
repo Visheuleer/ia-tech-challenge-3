@@ -109,7 +109,7 @@ def create_clinical_workflow():
         "safety_validation",
         route_after_validation,
         {
-            "safe": "add_sources",
+            "safe": "build_final_response",
             "needs_review": (
                 "add_review_warning"
             ),
@@ -120,7 +120,7 @@ def create_clinical_workflow():
     )
 
     graph.add_edge(
-        "add_sources",
+        "build_final_response",
         END,
     )
 
