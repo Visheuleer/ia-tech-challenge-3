@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 
-from medical_assistant.api.routes.health import router as health_router
-from medical_assistant.api.routes.patients import router as patients_router
+from medical_assistant.api.routes import (
+    health_router,
+    patients_router,
+    assistant_router,
+)
 from medical_assistant.core.config import settings
 
 
@@ -16,3 +19,4 @@ app = FastAPI(
 
 app.include_router(health_router)
 app.include_router(patients_router)
+app.include_router(assistant_router)

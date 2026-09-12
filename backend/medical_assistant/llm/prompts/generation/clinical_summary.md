@@ -1,4 +1,8 @@
-Produza apenas um resumo clínico curto, com no máximo 3 frases.
+Produza apenas o texto do resumo clínico, com no máximo 3 frases.
+
+Não escreva títulos, cabeçalhos, listas ou Markdown.
+
+Não escreva "Resumo clínico".
 
 Utilize exclusivamente os fatos fornecidos.
 
@@ -11,7 +15,5 @@ Não:
 - suponha adesão a medicamentos;
 - suponha duração de acompanhamento;
 - crie novos diagnósticos.
-
-Não use listas ou títulos.
 
 Se uma informação não estiver explicitamente presente, não a mencione.

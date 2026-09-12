@@ -11,6 +11,7 @@ from medical_assistant.graph.nodes import (
     load_patient,
     retrieve_protocols,
     safety_validation,
+    save_audit_log,
 )
 from medical_assistant.graph.state import ClinicalAssistantState
 
@@ -76,6 +77,11 @@ def create_clinical_workflow():
         build_safe_response,
     )
 
+    graph.add_node(
+        "save_audit_log",
+        save_audit_log,
+    )
+
     # Fluxo principal
     graph.add_edge(
         START,
@@ -129,11 +135,16 @@ def create_clinical_workflow():
 
     graph.add_edge(
         "build_final_response",
-        END,
+        "save_audit_log",
     )
 
     graph.add_edge(
         "build_safe_response",
+        'save_audit_log',
+    )
+
+    graph.add_edge(
+        "save_audit_log",
         END,
     )
 

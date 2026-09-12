@@ -2,6 +2,7 @@ from typing import Any, TypedDict
 
 
 class ClinicalAssistantState(TypedDict, total=False):
+    audit_log_id: int
     patient_id: int
     question: str
 

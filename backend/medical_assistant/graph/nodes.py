@@ -1,6 +1,7 @@
 from statistics import mean
 from typing import Any
 
+from medical_assistant.database.models.audit_log import AuditLog
 from medical_assistant.database.session import SessionLocal
 from medical_assistant.graph.state import ClinicalAssistantState
 from medical_assistant.services.patient_service import (
@@ -13,6 +14,57 @@ from medical_assistant.llm.prompt_loader import load_prompt
 from medical_assistant.llm.guardrails import (
     validate_response,
 )
+
+def save_audit_log(
+    state: ClinicalAssistantState,
+) -> ClinicalAssistantState:
+    with SessionLocal() as db:
+        log = AuditLog(
+            patient_id=state["patient_id"],
+            question=state["question"],
+            retrieved_context={
+                "blood_pressure_status": state.get(
+                    "blood_pressure_status"
+                ),
+                "blood_pressure_summary": state.get(
+                    "blood_pressure_summary"
+                ),
+                "pending_exams": state.get(
+                    "pending_exams",
+                    []
+                ),
+                "protocol_results": state.get(
+                    "protocol_results",
+                    []
+                ),
+            },
+            model_response=state.get(
+                "clinical_summary",
+                ""
+            ),
+            validation_result={
+                "status": state.get(
+                    "safety_status"
+                ),
+                "violations": state.get(
+                    "safety_violations",
+                    []
+                ),
+            },
+            sources=state.get(
+                "sources",
+                []
+            ),
+        )
+
+        db.add(log)
+        db.commit()
+        db.refresh(log)
+
+    return {
+        "audit_log_id": log.id,
+    }
+
 
 def serialize_patient(patient: Any) -> dict[str, Any]:
     return {
@@ -439,9 +491,34 @@ def generate_summary(
     )
 
     return {
-        "clinical_summary": response.strip(),
+        "clinical_summary": clean_summary(
+            response
+        ),
     }
 
+
+def clean_summary(
+    text: str,
+) -> str:
+    summary = text.strip()
+
+    prefixes = [
+        "### Resumo clínico",
+        "## Resumo clínico",
+        "# Resumo clínico",
+        "Resumo clínico:",
+        "Resumo clínico",
+    ]
+
+    for prefix in prefixes:
+        if summary.lower().startswith(
+            prefix.lower()
+        ):
+            summary = summary[
+                len(prefix):
+            ].lstrip(":\n ")
+
+    return summary.strip()
 
 def safety_validation(
     state: ClinicalAssistantState,

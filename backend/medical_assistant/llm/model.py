@@ -6,6 +6,7 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
 )
+from peft import PeftModel
 
 from medical_assistant.core.config import settings
 
@@ -35,20 +36,15 @@ class MedicalLLM:
             return
 
         try:
-            from peft import PeftModel
-
             self.model = PeftModel.from_pretrained(
                 self.model,
-                str(adapter_path),
+                adapter_path,
             )
+        except Exception:
+            import traceback
 
-            self.model.eval()
-            self.adapter_loaded = True
-
-        except Exception as exc:
-            raise RuntimeError(
-                f"Failed to load LoRA adapter from {adapter_path}"
-            ) from exc
+            traceback.print_exc()
+            raise
 
     def generate(
         self,
