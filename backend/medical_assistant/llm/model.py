@@ -19,8 +19,8 @@ class MedicalLLM:
 
         self.model = AutoModelForCausalLM.from_pretrained(
             settings.llm_base_model,
-            torch_dtype="auto",
-            device_map="auto",
+            torch_dtype=torch.float32, #auto
+            device_map="cpu", #auto
         )
 
         self.model.eval()
