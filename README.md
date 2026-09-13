@@ -41,25 +41,7 @@ Projeto desenvolvido na Pós-Graduação em **IA para Devs**, com foco em integr
 
 ## Arquitetura
 
-```mermaid
-flowchart LR
-    A[Frontend Next.js] --> B[FastAPI]
-    B --> C[LangGraph]
-
-    C --> D[(SQLite)]
-    C --> E[FAISS / RAG]
-    C --> F[Qwen + LoRA]
-    C --> G[Guardrails]
-
-    D --> H[Contexto do paciente]
-    E --> I[Protocolos]
-    H --> F
-    I --> F
-
-    F --> G
-    G --> J[Resposta final]
-    J --> K[(AuditLog)]
-```
+![Arquitetura geral do sistema](docs/architecture/arquitetura_geral.png)
 
 O sistema combina:
 
