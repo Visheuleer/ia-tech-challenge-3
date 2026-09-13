@@ -239,6 +239,30 @@ save_audit_log
 ```
 
 ---
+## Execução do modelo
+
+O projeto utiliza o modelo base
+`Qwen/Qwen2.5-1.5B-Instruct` em conjunto com o
+adapter LoRA treinado neste projeto.
+
+O modelo base é obtido automaticamente do Hugging Face,
+enquanto o adapter fine-tuned está disponível em:
+
+`artifacts/models/hypertension-assistant/`
+
+O carregamento detecta automaticamente o hardware:
+
+- em ambientes com CUDA, o modelo utiliza GPU;
+- em ambientes sem CUDA, o modelo é executado em CPU.
+
+A execução em CPU é suportada, porém a geração das
+respostas pode levar mais tempo.
+
+O fine-tuning não precisa ser executado novamente para
+utilizar a aplicação. O pipeline de treinamento permanece
+disponível em `training/` para fins de reprodução.
+
+---
 
 ## API principal
 

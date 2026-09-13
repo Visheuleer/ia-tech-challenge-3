@@ -13,14 +13,44 @@ from medical_assistant.core.config import settings
 
 class MedicalLLM:
     def __init__(self) -> None:
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            settings.llm_base_model,
+        self.tokenizer = (
+            AutoTokenizer.from_pretrained(
+                settings.llm_base_model,
+            )
         )
 
-        self.model = AutoModelForCausalLM.from_pretrained(
-            settings.llm_base_model,
-            torch_dtype=torch.float32, #auto
-            device_map="cpu", #auto
+        if torch.cuda.is_available():
+            dtype = torch.float16
+            device_map = "auto"
+
+            print(
+                "[LLM] CUDA detected. "
+                "Loading model on GPU."
+            )
+        else:
+            dtype = torch.float32
+            device_map = {
+                "": "cpu",
+            }
+
+            print(
+                "[LLM] CUDA not available. "
+                "Loading model on CPU."
+            )
+
+        self.model = (
+            AutoModelForCausalLM.from_pretrained(
+                settings.llm_base_model,
+                torch_dtype=dtype,
+                device_map=device_map,
+            )
+        )
+
+        self.model = (
+            PeftModel.from_pretrained(
+                self.model,
+                settings.llm_adapter_path,
+            )
         )
 
         self.model.eval()
