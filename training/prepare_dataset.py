@@ -16,14 +16,9 @@ MEDQUAD_PATH = Path(
     "data/interim/medquad_hypertension.jsonl"
 )
 
-SYNTHETIC_BEHAVIOR_PATH = Path(
+SYNTHETIC_PATH = Path(
     "data/raw/datasets/synthetic/"
     "hypertension_qa.jsonl"
-)
-
-SYNTHETIC_INTERNAL_PATH = Path(
-    "data/raw/datasets/synthetic/"
-    "internal_clinical_examples.jsonl"
 )
 
 OUTPUT_DIR = Path(
@@ -90,9 +85,7 @@ def prepare_medquad_record(
     record: dict[str, Any],
     system_prompt: str,
 ) -> dict[str, Any]:
-    record = anonymize_record(
-        record
-    )
+    record = anonymize_record(record)
 
     question = normalize_text(
         record["question"]
@@ -141,11 +134,8 @@ def prepare_medquad_record(
 def prepare_synthetic_record(
     record: dict[str, Any],
     system_prompt: str,
-    dataset_name: str,
 ) -> dict[str, Any]:
-    record = anonymize_record(
-        record
-    )
+    record = anonymize_record(record)
 
     instruction = normalize_text(
         record["instruction"]
@@ -171,7 +161,7 @@ def prepare_synthetic_record(
             },
         ],
         "metadata": {
-            "dataset": dataset_name,
+            "dataset": "synthetic",
             "category": record.get(
                 "category"
             ),
@@ -211,20 +201,14 @@ def split_medquad_by_document(
         group_ids
     )
 
-    total = len(
-        group_ids
-    )
+    total = len(group_ids)
 
     train_end = int(
         total * TRAIN_RATIO
     )
 
-    validation_end = (
-        train_end
-        + int(
-            total
-            * VALIDATION_RATIO
-        )
+    validation_end = train_end + int(
+        total * VALIDATION_RATIO
     )
 
     train_groups = group_ids[
@@ -249,15 +233,9 @@ def split_medquad_by_document(
         ]
 
     return (
-        flatten(
-            train_groups
-        ),
-        flatten(
-            validation_groups
-        ),
-        flatten(
-            test_groups
-        ),
+        flatten(train_groups),
+        flatten(validation_groups),
+        flatten(test_groups),
     )
 
 
@@ -274,45 +252,20 @@ def split_synthetic_by_category(
     ] = defaultdict(list)
 
     for record in records:
-        metadata = record[
-            "metadata"
-        ]
-
-        dataset = (
-            metadata.get(
-                "dataset"
-            )
-            or "synthetic"
-        )
-
         category = (
-            metadata.get(
+            record["metadata"].get(
                 "category"
             )
             or "unknown"
         )
 
-        group_key = (
-            f"{dataset}::{category}"
-        )
-
-        categories[
-            group_key
-        ].append(
+        categories[category].append(
             record
         )
 
-    train: list[
-        dict[str, Any]
-    ] = []
-
-    validation: list[
-        dict[str, Any]
-    ] = []
-
-    test: list[
-        dict[str, Any]
-    ] = []
+    train: list[dict[str, Any]] = []
+    validation: list[dict[str, Any]] = []
+    test: list[dict[str, Any]] = []
 
     for category_records in (
         categories.values()
@@ -366,35 +319,22 @@ def split_synthetic_by_category(
 def remove_duplicates(
     records: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    unique: list[
-        dict[str, Any]
-    ] = []
-
+    unique: list[dict[str, Any]] = []
     seen: set[str] = set()
 
     for record in records:
         user_message = next(
             message["content"]
-            for message
-            in record["messages"]
-            if (
-                message["role"]
-                == "user"
-            )
+            for message in record["messages"]
+            if message["role"] == "user"
         )
 
-        key = (
-            user_message
-            .casefold()
-        )
+        key = user_message.casefold()
 
         if key in seen:
             continue
 
-        seen.add(
-            key
-        )
-
+        seen.add(key)
         unique.append(
             record
         )
@@ -423,107 +363,36 @@ def write_jsonl(
                 )
             )
 
-            file.write(
-                "\n"
-            )
+            file.write("\n")
 
 
 def print_dataset_summary(
     name: str,
     records: list[dict[str, Any]],
 ) -> None:
-    counts: dict[
-        str,
-        int,
-    ] = {}
+    counts: dict[str, int] = {}
 
     for record in records:
         dataset = (
-            record[
-                "metadata"
-            ][
+            record["metadata"][
                 "dataset"
             ]
         )
 
-        counts[
-            dataset
-        ] = (
-            counts.get(
-                dataset,
-                0,
-            )
+        counts[dataset] = (
+            counts.get(dataset, 0)
             + 1
         )
 
     print(
-        f"{name}: "
-        f"{len(records)} examples"
+        f"{name}: {len(records)} examples"
     )
 
     for dataset, count in sorted(
         counts.items()
     ):
         print(
-            f"  {dataset}: "
-            f"{count}"
-        )
-
-
-def print_category_summary(
-    name: str,
-    records: list[dict[str, Any]],
-) -> None:
-    categories: dict[
-        str,
-        int,
-    ] = {}
-
-    for record in records:
-        metadata = (
-            record[
-                "metadata"
-            ]
-        )
-
-        category = (
-            metadata.get(
-                "category"
-            )
-        )
-
-        if category is None:
-            continue
-
-        key = (
-            f"{metadata['dataset']}"
-            f"::{category}"
-        )
-
-        categories[
-            key
-        ] = (
-            categories.get(
-                key,
-                0,
-            )
-            + 1
-        )
-
-    if not categories:
-        return
-
-    print()
-    print(
-        f"{name} categories:"
-    )
-
-    for category, count in sorted(
-        categories.items()
-    ):
-        print(
-            f"  {category}: "
-            f"{count}"
+            f"  {dataset}: {count}"
         )
 
 
@@ -540,81 +409,33 @@ def main() -> None:
         MEDQUAD_PATH
     )
 
-    synthetic_behavior_raw = (
-        read_jsonl(
-            SYNTHETIC_BEHAVIOR_PATH
-        )
+    synthetic_raw = read_jsonl(
+        SYNTHETIC_PATH
     )
-
-    synthetic_internal_raw = (
-        read_jsonl(
-            SYNTHETIC_INTERNAL_PATH
-        )
-    )
-
 
     medquad = [
         prepare_medquad_record(
             record,
             system_prompt,
         )
-        for record
-        in medquad_raw
+        for record in medquad_raw
     ]
 
-
-    synthetic_behavior = [
+    synthetic = [
         prepare_synthetic_record(
             record,
             system_prompt,
-            dataset_name=(
-                "synthetic_behavior"
-            ),
         )
-        for record
-        in synthetic_behavior_raw
+        for record in synthetic_raw
     ]
-
-
-    synthetic_internal = [
-        prepare_synthetic_record(
-            record,
-            system_prompt,
-            dataset_name=(
-                "synthetic_internal"
-            ),
-        )
-        for record
-        in synthetic_internal_raw
-    ]
-
 
     medquad = remove_duplicates(
         medquad
     )
 
-    synthetic_behavior = (
-        remove_duplicates(
-            synthetic_behavior
-        )
-    )
-
-    synthetic_internal = (
-        remove_duplicates(
-            synthetic_internal
-        )
-    )
-
-
-    synthetic = (
-        synthetic_behavior
-        + synthetic_internal
-    )
-
     synthetic = remove_duplicates(
         synthetic
     )
-
 
     (
         medquad_train,
@@ -624,7 +445,6 @@ def main() -> None:
         medquad
     )
 
-
     (
         synthetic_train,
         synthetic_validation,
@@ -632,7 +452,6 @@ def main() -> None:
     ) = split_synthetic_by_category(
         synthetic
     )
-
 
     train = (
         medquad_train
@@ -649,52 +468,29 @@ def main() -> None:
         + synthetic_test
     )
 
-
-    random.shuffle(
-        train
-    )
-
-    random.shuffle(
-        validation
-    )
-
-    random.shuffle(
-        test
-    )
-
+    random.shuffle(train)
+    random.shuffle(validation)
+    random.shuffle(test)
 
     write_jsonl(
-        OUTPUT_DIR
-        / "train.jsonl",
+        OUTPUT_DIR / "train.jsonl",
         train,
     )
 
     write_jsonl(
-        OUTPUT_DIR
-        / "validation.jsonl",
+        OUTPUT_DIR / "validation.jsonl",
         validation,
     )
 
     write_jsonl(
-        OUTPUT_DIR
-        / "test.jsonl",
+        OUTPUT_DIR / "test.jsonl",
         test,
     )
 
-
     print()
-    print(
-        "=" * 60
-    )
-
-    print(
-        "DATASET PREPARATION SUMMARY"
-    )
-
-    print(
-        "=" * 60
-    )
-
+    print("=" * 60)
+    print("DATASET PREPARATION SUMMARY")
+    print("=" * 60)
 
     print(
         f"MedQuAD input: "
@@ -702,23 +498,11 @@ def main() -> None:
     )
 
     print(
-        "Synthetic behavior input: "
-        f"{len(synthetic_behavior_raw)}"
+        f"Synthetic input: "
+        f"{len(synthetic_raw)}"
     )
-
-    print(
-        "Synthetic internal input: "
-        f"{len(synthetic_internal_raw)}"
-    )
-
-    print(
-        "Synthetic total input: "
-        f"{len(synthetic_behavior_raw) + len(synthetic_internal_raw)}"
-    )
-
 
     print()
-
 
     print_dataset_summary(
         "Train",
@@ -735,32 +519,14 @@ def main() -> None:
         test,
     )
 
-
-    print_category_summary(
-        "Train",
-        train,
-    )
-
-    print_category_summary(
-        "Validation",
-        validation,
-    )
-
-    print_category_summary(
-        "Test",
-        test,
-    )
-
-
     print()
 
     print(
-        "Total: "
+        f"Total: "
         f"{len(train) + len(validation) + len(test)}"
     )
 
     print()
-
     print(
         "Processed datasets saved to "
         f"{OUTPUT_DIR}"
